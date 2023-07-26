@@ -8,13 +8,16 @@ import tomllib
 filepath = pathlib.Path(__file__).absolute()
 
 CUBEMX_FOLDER_PATH = filepath.parent
-PROJECTPATH = CUBEMX_FOLDER_PATH.parent
 
 for parent in CUBEMX_FOLDER_PATH.parents:
     if parent.name == "lib":
         PROJECTPATH = parent.parent
+        PROJECTNAME = PROJECTPATH.stem
+        break
+else:
+    PROJECTPATH = CUBEMX_FOLDER_PATH
+    PROJECTNAME = "cubemxgen"
 
-PROJECTNAME = PROJECTPATH.stem
 
 CFGPATH = CUBEMX_FOLDER_PATH / "config.toml"
 IOC_PATH = CUBEMX_FOLDER_PATH / f"{PROJECTNAME}.ioc"
@@ -163,7 +166,9 @@ def read_cubemx_loc(cfg: dict[str, str]):
 
 def open_ioc(
     load_cmd,
+    
     cubemx_path,
+    post_cmd="",
 ):
     script = f"""
 {load_cmd}
@@ -174,7 +179,7 @@ project name {PROJECTNAME}
 project path "{TEMPFOLDER}"
 project toolchain Makefile
 project couplefilesbyip 1
-
+{post_cmd}
 """.replace(
         "c:\\", "C:\\"
     )
@@ -207,17 +212,19 @@ def main():
     else:
         for item in CUBEMX_FOLDER_PATH.glob("*.ioc"):
             ioc_path = item
+    
+    post_cmd = ""
+    load_cmd = ""
 
     if ioc_path is not None and ioc_path.exists():
         load_cmd = f'config load "{ioc_path}"'
     else:
         if BOARDNAME_KEY in cfg and (board_name := cfg[BOARDNAME_KEY]) != "":
             load_cmd = f"loadboard {board_name} allmodes"
-            
-        else:
-            load_cmd = f""
+            post_cmd = f'config saveext "{CUBEMX_FOLDER_PATH/PROJECTNAME}.ioc" '
 
-    open_ioc(load_cmd, cube_loc)
+
+    open_ioc(load_cmd, cube_loc, post_cmd)
 
 
 if __name__ == "__main__":
