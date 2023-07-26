@@ -4,16 +4,17 @@ import pathlib
 import shutil
 import tomllib
 
+DEBUGGING = False
+
 
 filepath = pathlib.Path(__file__).absolute()
 
 CUBEMX_FOLDER_PATH = filepath.parent
 
-for parent in CUBEMX_FOLDER_PATH.parents:
-    if parent.name == "lib":
-        PROJECTPATH = parent.parent
-        PROJECTNAME = PROJECTPATH.stem
-        break
+if not DEBUGGING:
+    PROJECTPATH = CUBEMX_FOLDER_PATH.parent
+    PROJECTNAME = PROJECTPATH.stem
+
 else:
     PROJECTPATH = CUBEMX_FOLDER_PATH
     PROJECTNAME = "cubemxgen"
@@ -67,7 +68,7 @@ def createdefaultcfgfile(path):
         f.write(
             f"""# Config for the python script to generate CUBE MX files
 
-# Specify BOARDNAME example "NUCLEO-F072RB" otherwise
+# Specify BOARDNAME example "NUCLEO-H7A3ZI-Q" otherwise
 # generate ioc file with CubeMX and save it in this folder
 {BOARDNAME_KEY} = ""
 
@@ -161,12 +162,8 @@ def read_cubemx_loc(cfg: dict[str, str]):
     return CUBEMX_PATH
 
 
-
-
-
 def open_ioc(
     load_cmd,
-    
     cubemx_path,
     post_cmd="",
 ):
@@ -187,7 +184,7 @@ project couplefilesbyip 1
     create_temp_folder()
 
     for normal, temp in dir_mapping:
-        copy_files(CUBEMX_FOLDER_PATH / normal, AUTOGENFOLDER / temp)
+        copy_files(PROJECTPATH / normal, AUTOGENFOLDER / temp)
 
     try:
         run_mx(cubemx_path, script_s=script, headless=False)
@@ -197,7 +194,7 @@ project couplefilesbyip 1
         print("Interrupted!")
 
     for normal, temp in dir_mapping:
-        copy_files(AUTOGENFOLDER / temp, CUBEMX_FOLDER_PATH / normal)
+        copy_files(AUTOGENFOLDER / temp, PROJECTPATH / normal)
 
     remove_temp_folder()
 
@@ -212,7 +209,7 @@ def main():
     else:
         for item in CUBEMX_FOLDER_PATH.glob("*.ioc"):
             ioc_path = item
-    
+
     post_cmd = ""
     load_cmd = ""
 
@@ -222,7 +219,6 @@ def main():
         if BOARDNAME_KEY in cfg and (board_name := cfg[BOARDNAME_KEY]) != "":
             load_cmd = f"loadboard {board_name} allmodes"
             post_cmd = f'config saveext "{CUBEMX_FOLDER_PATH/PROJECTNAME}.ioc" '
-
 
     open_ioc(load_cmd, cube_loc, post_cmd)
 
