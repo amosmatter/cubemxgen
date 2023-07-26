@@ -63,11 +63,13 @@ def createdefaultcfgfile(path):
     with open(path, "w") as f:
         f.write(
             f"""# Config for the python script to generate CUBE MX files
-# Specify either BOARDNAME or MCUNAME
-{BOARDNAME_KEY} = ""
-{MCUNAME_KEY} = ""   
 
-# Specify the folder in which the cubemx application is located
+# Specify BOARDNAME example "NUCLEO-F072RB" otherwise
+# generate ioc file with CubeMX and save it in this folder
+{BOARDNAME_KEY} = ""
+
+# Specify the folder in which the cubemx application is located, usually:
+# "C:/Program Files/STMicroelectronics/STM32Cube/STM32CubeMX"
 {CUBEMX_LOC_KEY} = ""                
 """
         )
@@ -119,7 +121,7 @@ def load_cfg():
     if not CFGPATH.exists():
         print("config.toml not found, creating default!")
         createdefaultcfgfile(CFGPATH)
-        return
+        exit(1)
 
     with open(CFGPATH, "rb") as f:
         cfg = tomllib.load(f)
@@ -127,7 +129,7 @@ def load_cfg():
     if not any(value.strip() != "" for value in cfg.values()):
         print("config.toml is empty!")
         createdefaultcfgfile(CFGPATH)
-        return
+        exit(1)
 
     return cfg
 
@@ -156,14 +158,7 @@ def read_cubemx_loc(cfg: dict[str, str]):
     return CUBEMX_PATH
 
 
-def get_board_or_mcu_name(cfg: dict[str, str]):
-    if BOARDNAME_KEY in cfg and (BOARDNAME := cfg[BOARDNAME_KEY]) != "":
-        return BOARDNAME, True
-    elif MCUNAME_KEY in cfg and (MCUNAME := cfg[MCUNAME_KEY]) != "":
-        return MCUNAME, False
-    else:
-        print(f"Neither {BOARDNAME_KEY} nor {MCUNAME_KEY} specified in config.toml")
-        return None, None
+
 
 
 def open_ioc(
@@ -216,12 +211,11 @@ def main():
     if ioc_path is not None and ioc_path.exists():
         load_cmd = f'config load "{ioc_path}"'
     else:
-        target_name, target_is_board = get_board_or_mcu_name(cfg)
-
-        if target_is_board:
-            load_cmd = f"loadboard {target_name} allmodes"
+        if BOARDNAME_KEY in cfg and (board_name := cfg[BOARDNAME_KEY]) != "":
+            load_cmd = f"loadboard {board_name} allmodes"
+            
         else:
-            load_cmd = f"load {target_name}"
+            load_cmd = f""
 
     open_ioc(load_cmd, cube_loc)
 
